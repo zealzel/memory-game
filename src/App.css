@@ -304,3 +304,85 @@
   background: #1976D2 !important;
 }
 
+.leaderboard-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.reset-button {
+  padding: 8px 16px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.reset-button:hover {
+  background: #d32f2f;
+}
+
+.difficulty-tabs button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.current-game-note {
+  font-size: 0.8em;
+  color: #666;
+  margin-left: 10px;
+}
+
+.rank-1 {
+  background: #ffd700 !important;
+  font-weight: bold;
+}
+
+.rank-2 {
+  background: #c0c0c0 !important;
+}
+
+.rank-3 {
+  background: #cd7f32 !important;
+}
+
+.win-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.menu-button {
+  background: #2196F3 !important;
+}
+
+.menu-button:hover {
+  background: #1976D2 !important;
+}
+
+.sound-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+  border: 2px solid #4CAF50;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.sound-toggle:hover {
+  background: #4CAF50;
+  color: white;
+}
+

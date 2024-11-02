@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Card from './components/Card';
 import './App.css';
 
@@ -18,6 +18,16 @@ function App() {
     return saved ? JSON.parse(saved) : {};
   });
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+
+  // 新增音效相關的 refs
+  const bgmEasyRef = useRef(new Audio(`${process.env.PUBLIC_URL}/audio/bgm-easy.mp3`));
+  const bgmMediumRef = useRef(new Audio(`${process.env.PUBLIC_URL}/audio/bgm-medium.mp3`));
+  const bgmHardRef = useRef(new Audio(`${process.env.PUBLIC_URL}/audio/bgm-hard.mp3`));
+  const flipSoundRef = useRef(new Audio(`${process.env.PUBLIC_URL}/audio/flip.mp3`));
+  const startSoundRef = useRef(new Audio(`${process.env.PUBLIC_URL}/audio/start.mp3`));
+  const winSoundRef = useRef(new Audio(`${process.env.PUBLIC_URL}/audio/win.mp3`));
+  
+  const [isMuted, setIsMuted] = useState(false);
 
   // 載入排行榜
   useEffect(() => {
@@ -101,6 +111,10 @@ function App() {
     setGameTime(0);
     setIsPlaying(true);
     setIsGameWon(false);
+    
+    if (!isMuted) {
+      startSoundRef.current.play().catch(e => console.log('Start sound autoplay prevented'));
+    }
   };
 
   useEffect(() => {
@@ -118,12 +132,21 @@ function App() {
       setIsGameWon(true);
       setIsPlaying(false);
       saveToLeaderboard();
+      
+      if (!isMuted) {
+        winSoundRef.current.play().catch(e => console.log('Win sound autoplay prevented'));
+      }
     }
   }, [matched, cards]);
 
   const handleCardClick = (cardId) => {
     if (flipped.length === 2 || isGameWon) return;
     if (matched.includes(cardId)) return;
+    
+    if (!isMuted) {
+      flipSoundRef.current.currentTime = 0;
+      flipSoundRef.current.play().catch(e => console.log('Flip sound autoplay prevented'));
+    }
     
     setFlipped(prev => [...prev, cardId]);
     setMoves(prev => prev + 1);
@@ -144,6 +167,66 @@ function App() {
     return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
   };
 
+  // 新增：重置排行榜函數
+  const resetLeaderboard = () => {
+    if (window.confirm('確定要刪除所有遊戲記錄嗎？此操作無法復原。')) {
+      setLeaderboard({});
+      localStorage.removeItem('leaderboard');
+    }
+  };
+
+  // 新增：返回主選單函數
+  const backToMenu = () => {
+    setIsPlaying(false);
+    setIsGameWon(false);
+    setCards([]);
+    setFlipped([]);
+    setMatched([]);
+    setMoves(0);
+    setGameTime(0);
+  };
+
+  // 設置背景音樂循環播放
+  useEffect(() => {
+    [bgmEasyRef, bgmMediumRef, bgmHardRef].forEach(ref => {
+      ref.current.loop = true;
+    });
+  }, []);
+
+  // 控制背景音樂
+  useEffect(() => {
+    const stopAllBgm = () => {
+      [bgmEasyRef, bgmMediumRef, bgmHardRef].forEach(ref => {
+        ref.current.pause();
+        ref.current.currentTime = 0;
+      });
+    };
+
+    if (isPlaying && !isMuted) {
+      stopAllBgm();
+      const currentBgm = {
+        easy: bgmEasyRef,
+        medium: bgmMediumRef,
+        hard: bgmHardRef
+      }[difficulty];
+      
+      currentBgm.current.play().catch(e => console.log('BGM autoplay prevented'));
+    } else {
+      stopAllBgm();
+    }
+
+    return () => stopAllBgm();
+  }, [isPlaying, difficulty, isMuted]);
+
+  // 新增音量控制按鈕
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    [bgmEasyRef, bgmMediumRef, bgmHardRef, flipSoundRef, startSoundRef, winSoundRef]
+      .forEach(ref => {
+        ref.current.muted = !isMuted;
+      });
+  };
+
   const LeaderboardView = ({ onClose }) => (
     <div className="leaderboard-overlay">
       <div className="leaderboard-modal">
@@ -152,24 +235,30 @@ function App() {
           <button 
             className={difficulty === 'easy' ? 'active' : ''} 
             onClick={() => setDifficulty('easy')}
+            disabled={isPlaying}
           >
             簡單
           </button>
           <button 
             className={difficulty === 'medium' ? 'active' : ''} 
             onClick={() => setDifficulty('medium')}
+            disabled={isPlaying}
           >
             中等
           </button>
           <button 
             className={difficulty === 'hard' ? 'active' : ''} 
             onClick={() => setDifficulty('hard')}
+            disabled={isPlaying}
           >
             困難
           </button>
         </div>
         <div className="leaderboard-content">
-          <h3>{difficulty === 'easy' ? '簡單' : difficulty === 'medium' ? '中等' : '困難'} 模式排行榜</h3>
+          <h3>
+            {difficulty === 'easy' ? '簡單' : difficulty === 'medium' ? '中等' : '困難'} 模式排行榜
+            {isPlaying && <span className="current-game-note">（遊戲進行中無法切換難度）</span>}
+          </h3>
           <div className="leaderboard-list">
             <div className="leaderboard-header">
               <span>排名</span>
@@ -179,7 +268,7 @@ function App() {
               <span>日期</span>
             </div>
             {leaderboard[difficulty]?.map((score, index) => (
-              <div key={index} className="leaderboard-item">
+              <div key={index} className={`leaderboard-item ${index < 3 ? `rank-${index + 1}` : ''}`}>
                 <span>#{index + 1}</span>
                 <span>{score.name}</span>
                 <span>{score.moves}步</span>
@@ -189,7 +278,24 @@ function App() {
             )) || <div className="no-records">暫無記錄</div>}
           </div>
         </div>
-        <button className="close-button" onClick={onClose}>關閉</button>
+        <div className="leaderboard-buttons">
+          <button 
+            className="reset-button" 
+            onClick={() => {
+              if (window.confirm(`確定要刪除${difficulty === 'easy' ? '簡單' : difficulty === 'medium' ? '中等' : '困難'}難度的所有記錄嗎？此操作無法復原。`)) {
+                const newLeaderboard = { ...leaderboard };
+                delete newLeaderboard[difficulty];
+                setLeaderboard(newLeaderboard);
+                localStorage.setItem('leaderboard', JSON.stringify(newLeaderboard));
+              }
+            }}
+          >
+            重置當前難度記錄
+          </button>
+          <button className="close-button" onClick={onClose}>
+            關閉
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -198,6 +304,14 @@ function App() {
     <div className="App">
       <h1>記憶遊戲</h1>
       
+      {/* 添加音量控制按鈕 */}
+      <button 
+        className="sound-toggle"
+        onClick={toggleMute}
+      >
+        {isMuted ? '🔇' : '🔊'}
+      </button>
+
       {showNameInput ? (
         <div className="name-input-overlay">
           <form onSubmit={handleNameSubmit} className="name-input-form">
@@ -263,7 +377,10 @@ function App() {
                   ))}
                 </div>
               </div>
-              <button onClick={startGame}>再玩一次</button>
+              <div className="win-buttons">
+                <button onClick={startGame}>再玩一次</button>
+                <button onClick={backToMenu} className="menu-button">返回主選單</button>
+              </div>
             </div>
           )}
 
