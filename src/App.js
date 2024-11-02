@@ -17,6 +17,7 @@ function App() {
     const saved = localStorage.getItem('leaderboard');
     return saved ? JSON.parse(saved) : {};
   });
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
 
   // 載入排行榜
   useEffect(() => {
@@ -139,6 +140,60 @@ function App() {
     }
   };
 
+  const formatTime = (seconds) => {
+    return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, '0')}`;
+  };
+
+  const LeaderboardView = ({ onClose }) => (
+    <div className="leaderboard-overlay">
+      <div className="leaderboard-modal">
+        <h2>遊戲排行榜</h2>
+        <div className="difficulty-tabs">
+          <button 
+            className={difficulty === 'easy' ? 'active' : ''} 
+            onClick={() => setDifficulty('easy')}
+          >
+            簡單
+          </button>
+          <button 
+            className={difficulty === 'medium' ? 'active' : ''} 
+            onClick={() => setDifficulty('medium')}
+          >
+            中等
+          </button>
+          <button 
+            className={difficulty === 'hard' ? 'active' : ''} 
+            onClick={() => setDifficulty('hard')}
+          >
+            困難
+          </button>
+        </div>
+        <div className="leaderboard-content">
+          <h3>{difficulty === 'easy' ? '簡單' : difficulty === 'medium' ? '中等' : '困難'} 模式排行榜</h3>
+          <div className="leaderboard-list">
+            <div className="leaderboard-header">
+              <span>排名</span>
+              <span>玩家</span>
+              <span>步數</span>
+              <span>時間</span>
+              <span>日期</span>
+            </div>
+            {leaderboard[difficulty]?.map((score, index) => (
+              <div key={index} className="leaderboard-item">
+                <span>#{index + 1}</span>
+                <span>{score.name}</span>
+                <span>{score.moves}步</span>
+                <span>{formatTime(score.time)}</span>
+                <span>{new Date(score.date).toLocaleDateString()}</span>
+              </div>
+            )) || <div className="no-records">暫無記錄</div>}
+          </div>
+        </div>
+        <button className="close-button" onClick={onClose}>關閉</button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="App">
       <h1>記憶遊戲</h1>
@@ -158,6 +213,8 @@ function App() {
             <button type="submit">開始遊戲</button>
           </form>
         </div>
+      ) : showLeaderboard ? (
+        <LeaderboardView onClose={() => setShowLeaderboard(false)} />
       ) : (
         <>
           <div className="game-controls">
@@ -172,6 +229,12 @@ function App() {
             </select>
             <button onClick={startGame}>
               {isPlaying ? '重新開始' : '開始遊戲'}
+            </button>
+            <button 
+              className="leaderboard-button"
+              onClick={() => setShowLeaderboard(true)}
+            >
+              排行榜
             </button>
           </div>
 
